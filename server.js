@@ -5,18 +5,17 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const app = express();
 const User = require("./routes/user");
-const Employee = require("./routes/employee");
 const login = require("./routes/login");
 
 //mongoose connect
 
 mongoose
-  .connect("mongodb://localhost:27017/dealsdray")
+  .connect("mongodb://localhost:27017/emayam")
   .then(() => {
     console.log("MongoDb connected");
   })
   .catch((err) => {
-    console.log(err);
+    console.error(err);
   });
 
 //middlewares
@@ -27,11 +26,10 @@ app.use(cors());
 
 //routes
 app.use("/users", User);
-app.use("/employee", Employee);
 app.use("/login", login);
 
 // connection of mongodb
-const PORT = process.env.PORT || 6001;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`server listening the port ${PORT}`);

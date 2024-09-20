@@ -1,6 +1,8 @@
 const express = require("express");
 const Joi = require("joi");
 const router = express.Router();
+const Jwt = require("jsonwebtoken");
+
 const UserModel = require("../models/userModel");
 
 //login post
@@ -13,13 +15,18 @@ router.post("/", async (req, res) => {
     }
     const { username, password } = req.body;
     const user = await UserModel.findOne({ username, password });
-    console.log(user);
+
     if (!user) {
       return res.status(400).send("Invalid Username or Password");
     }
-    res.send("Logging in successfully");
+    const token = Jwt.sign({ role: user.role }, "secretkey", {
+      expiresIn: "12d",
+    });
+
+    res.setHeader("Token", token);
+    res.json({ message: "Logging in successfully", token, role: user.role });
   } catch (err) {
-    console.log(err.message);
+    console.error(err.message);
   }
 });
 

@@ -4,19 +4,12 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  email: {
+  role: {
     type: String,
-    required: true,
-  },
-  mobile: {
-    type: Number,
+    enum: ["admin", "editor", "viewer"],
     required: true,
   },
   password: {
-    type: String,
-    required: true,
-  },
-  confirm_password: {
     type: String,
     required: true,
   },

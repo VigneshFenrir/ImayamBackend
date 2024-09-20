@@ -8,26 +8,79 @@ const UserModel = require("../models/userModel");
 
 router.get("/", async (req, res) => {
   try {
-    const users = await UserModel.find();
-    res.send(users);
+    const itemsperpage = 10;
+    const pageno = req.query.page;
+    const skip = (pageno - 1) * itemsperpage;
+    const search = req.query.search;
+
+    if (search) {
+      const regex = new RegExp(`.*${search}.*`);
+      const users = await UserModel.find({
+        $or: [{ username: regex }, { role: regex }],
+      })
+        .limit(itemsperpage)
+        .skip(skip);
+
+      res.send(users);
+    } else {
+      const users = await UserModel.find().limit(itemsperpage).skip(skip);
+      res.send(users);
+    }
   } catch (err) {
-    console.log(err.message);
+    console.error(err.message);
   }
 });
 
-//get oneuser
-router.get("/:id", async (req, res) => {
+//get user by id
+router.get("/one:id", async (req, res) => {
   const id = req.params.id;
   try {
-    const user = await UserModel.findById(id);
+    const user = await UserModel.findById(id).select("-_id -__v -Date");
     if (!user) return res.status(400).send("Given Id does not exits");
     res.send(user);
   } catch (err) {
-    console.log(err.message);
+    console.error(err.message);
   }
 });
 
-//  Create User
+//update user
+
+router.put("/update:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const user = await UserModel.findByIdAndUpdate(
+      id,
+      {
+        username: req.body.username,
+        role: req.body.role,
+      },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(400).send("The user does not exits");
+    }
+
+    res.send("Updated user Successfully");
+  } catch (err) {
+    console.error(err.message);
+  }
+});
+
+//delete user
+router.delete("/delete:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const user = await UserModel.findByIdAndDelete(id);
+    if (!user) {
+      return res.status(400).send("The user does not exits");
+    }
+    res.send("Deleted Successfully");
+  } catch (err) {
+    console.error(err.message);
+  }
+});
+
+//  register || create user
 
 router.post("/", async (req, res) => {
   try {
@@ -35,92 +88,38 @@ router.post("/", async (req, res) => {
     if (error) {
       return res.status(400).send(error.details[0].message);
     }
-    const { username } = req.body;
+    const { username, role, password } = req.body;
     const userExist = await UserModel.findOne({ username });
-    console.log(userExist);
     if (userExist) {
       return res.status(400).send("username already exists");
     }
 
-    const { password, confirm_password } = req.body;
-    if (password !== confirm_password) {
-      return res.status(400).json("password does not match");
-    }
     const user = new UserModel({
-      username: req.body.username,
-      email: req.body.email,
-      mobile: req.body.mobile,
-      password: req.body.password,
-      confirm_password: req.body.confirm_password,
+      username,
+      role,
+      password,
     });
-    const saveUser = await user.save();
-    console.log(saveUser);
-    res.send("Created User Successfully");
+    await user.save();
+    res.send("Created Successfully");
   } catch (err) {
-    console.log(err.message);
+    console.error(err.message);
   }
 });
 
-//Update user
-
-router.put("/:id", async (req, res) => {
-  const id = req.params.id;
+router.get("/userTotal", async (req, res) => {
   try {
-    const { error } = validateUser(req.body);
-    if (error) {
-      return res.status(400).send(error.details[0].message);
-    }
-    const { password, confirm_password } = req.body;
-    if (password !== confirm_password) {
-      return res.status(400).json("password does not match");
-    }
-    const user = await UserModel.findByIdAndUpdate(
-      id,
-      {
-        username: req.body.username,
-        email: req.body.email,
-        mobile: req.body.mobile,
-        password: req.body.password,
-        confirm_password: req.body.confirm_password,
-      },
-      { new: true }
-    );
-    if (!user) {
-      return res.status(400).send("The User does not exits");
-    }
-    const saveUser = await user.save();
-    console.log(saveUser);
-    res.send("Updated User Successfully");
+    const user = await UserModel.find().countDocuments();
+    res.json(user);
   } catch (err) {
-    console.log(err.message);
+    console.error(err.message);
   }
 });
-
-//delete user
-
-router.delete("/:id", async (req, res) => {
-  const id = req.params.id;
-
-  try {
-    const user = await UserModel.findByIdAndDelete(id);
-    if (!user) {
-      return res.status(400).send("The User does not exits");
-    }
-    res.send("Deleted Successfully");
-  } catch (err) {
-    console.log(err.message);
-  }
-});
-
-//validate user
 
 function validateUser(user) {
   const schema = Joi.object({
     username: Joi.string().required(),
-    email: Joi.string().required(),
-    mobile: Joi.number().required(),
+    role: Joi.string().required(),
     password: Joi.string().required(),
-    confirm_password: Joi.string().required(),
   });
   const result = schema.validate(user);
   return result;
